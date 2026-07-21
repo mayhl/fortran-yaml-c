@@ -6,6 +6,7 @@ module fortran_yaml_c_interface
   private
 
   public :: parse
+  public :: parse_string
 
   type, bind(c) :: type_node_c
     
@@ -34,6 +35,15 @@ module fortran_yaml_c_interface
     function LoadFile_c(filename, err_len, err) result(ptr) bind(C, name="LoadFile_c")
       use, intrinsic :: iso_c_binding
       character(c_char), intent(in) :: filename(*)
+      integer(c_int) :: err_len
+      type(c_ptr) :: err
+      type(c_ptr) :: ptr
+    end function
+
+    function LoadString_c(buffer, buffer_len, err_len, err) result(ptr) bind(C, name="LoadString_c")
+      use, intrinsic :: iso_c_binding
+      character(c_char), intent(in) :: buffer(*)
+      integer(c_size_t), value :: buffer_len
       integer(c_int) :: err_len
       type(c_ptr) :: err
       type(c_ptr) :: ptr
@@ -154,6 +164,35 @@ contains
     nullify(root)
     
     root_c = LoadFile(trim(path), err)
+    if (c_associated(root_c)) then
+      call read_value(root_c, root)
+      call root%set_path("")
+      call DestroyNode(root_c)
+    endif
+
+  end function
+
+  function parse_string(buffer, err) result(root)
+    character(len=*), intent(in) :: buffer
+    character(:), allocatable, intent(out) :: err
+    class (type_node), pointer :: root
+    type(c_ptr) :: root_c
+
+    character(c_char), pointer :: err_c(:)
+    type(c_ptr) :: err_p
+    integer(c_int) :: err_len
+
+    nullify(root)
+
+    root_c = LoadString_c(buffer, int(len(buffer), c_size_t), err_len, err_p)
+
+    if (c_associated(err_p)) then
+      allocate(character(err_len)::err)
+      call c_f_pointer(err_p, err_c, [err_len+1])
+      call copy_string_ctof(err_c, err)
+      call DestroyChar(err_p)
+    endif
+
     if (c_associated(root_c)) then
       call read_value(root_c, root)
       call root%set_path("")

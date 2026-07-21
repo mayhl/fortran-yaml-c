@@ -22,6 +22,7 @@ module fortran_yaml_c
     class(type_node), pointer :: root => null()
   contains 
     procedure :: parse => YamlFile_parse
+    procedure :: parse_string => YamlFile_parse_string
     procedure :: dump => YamlFile_dump
     procedure :: finalize => YamlFile_finalize
     final :: YamlFile_final
@@ -35,6 +36,14 @@ contains
     character(:), allocatable, intent(out) :: err
     if (associated(self%root)) call self%finalize()
     self%root => parse(path, err)
+  end subroutine
+
+  subroutine YamlFile_parse_string(self, buffer, err)
+    class(YamlFile), intent(inout) :: self
+    character(*), intent(in) :: buffer
+    character(:), allocatable, intent(out) :: err
+    if (associated(self%root)) call self%finalize()
+    self%root => parse_string(buffer, err)
   end subroutine
 
   subroutine YamlFile_dump(self, unit, indent)
