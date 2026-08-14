@@ -315,11 +315,24 @@ contains
     logical, optional, intent(out) :: success
     integer :: value
 
-    integer :: ios
+    integer :: ios, first
+    logical :: ok
+    character(len=:), allocatable :: s
 
     value = default
-    read(self%string,*,iostat=ios) value
-    if (present(success)) success = (ios == 0)  .and. (index(trim(adjustl(self%string)), " ") == 0)
+    s = trim(adjustl(self%string))
+    first = 1
+    if (len(s) > 0) then
+      if (s(1:1) == '+' .or. s(1:1) == '-') first = 2
+    end if
+    ok = len(s) >= first
+    if (ok) ok = verify(s(first:), '0123456789') == 0
+    if (ok) then
+      read(s,*,iostat=ios) value
+      ok = ios == 0
+      if (.not. ok) value = default
+    end if
+    if (present(success)) success = ok
   end function
 
   function scalar_to_real(self, default, success) result(value)
@@ -329,10 +342,19 @@ contains
     real(dp) :: value
 
     integer :: ios
+    logical :: ok
+    character(len=:), allocatable :: s
 
     value = default
-    read(self%string,*,iostat=ios) value
-    if (present(success)) success = (ios == 0)  .and. (index(trim(adjustl(self%string)), " ") == 0)
+    s = trim(adjustl(self%string))
+    ok = len(s) > 0
+    if (ok) ok = verify(s, '0123456789+-.eEdDnNaAiIfFtTyY') == 0
+    if (ok) then
+      read(s,*,iostat=ios) value
+      ok = ios == 0
+      if (.not. ok) value = default
+    end if
+    if (present(success)) success = ok
   end function
 
   recursive subroutine node_set_path(self, path)
